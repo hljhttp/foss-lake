@@ -1,0 +1,12 @@
+#!/bin/sh
+set -ex
+
+superset fab create-admin \
+    --username admin \
+    --firstname admin \
+    --lastname admin \
+    --email admin@admin.com \
+    --password admin
+
+superset db upgrade
+superset init

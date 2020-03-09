@@ -1,0 +1,46 @@
+image: dremio/dremio-oss
+imageTag: latest
+
+coordinator:
+  memory: 1024
+  cpu: 0.5
+  count: 0
+  web:
+    port: 9047
+  client:
+    port: 31010
+  volumeSize: 10Gi
+
+executor:
+  memory: 1024
+  cpu: 0.5
+  count: 1
+  volumeSize: 10Gi
+  cloudCache:
+    enabled: true
+    quota:
+      fs_pct: 70
+      db_pct: 70
+      cache_pct: 100
+
+zookeeper:
+  memory: 512
+  cpu: 0.5
+  count: 1
+  volumeSize: 5Gi
+
+tls:
+  ui:
+    enabled: false
+    secret: dremio-tls-secret-ui
+  client:
+    enabled: false
+    secret: dremio-tls-secret-client
+
+serviceType: LoadBalancer
+
+#nodeSelector:
+#  key: value
+
+distStorage:
+  type: "local"

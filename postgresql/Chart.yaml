@@ -1,0 +1,7 @@
+apiVersion: v1
+name: postgresql
+version: 8.5.0
+appVersion: 11.7.0
+description: Chart for PostgreSQL, an object-relational database management system (ORDBMS) with an emphasis on extensibility and on standards-compliance.
+icon: https://bitnami.com/assets/stacks/postgresql/img/postgresql-stack-110x117.png
+engine: gotpl

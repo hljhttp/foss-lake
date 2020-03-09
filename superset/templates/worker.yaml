@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "superset.fullname" . }}-worker
+  labels:
+    app: {{ include "superset.name" . }}-worker
+    chart: {{ include "superset.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.workers }}
+  selector:
+    matchLabels:
+      app: {{ include "superset.name" . }}-worker
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      name: {{ include "superset.fullname" . }}-worker
+      labels:
+        app: {{ include "superset.name" . }}-worker
+        chart: {{ include "superset.chart" . }}
+        release: {{ .Release.Name }}
+        heritage: {{ .Release.Service }}
+      annotations:
+        checksum/secrets: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.deploymentAnnotations }}
+        {{- . | toYaml | nindent 8 }}
+        {{- end }}
+    spec:
+      volumes:
+        - name: superset-configs
+          secret:
+            secretName: {{ include "superset.fullname" . }}
+      {{- if .Values.image.pullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.image.pullSecrets | indent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["celery", "worker", "--app=superset.tasks.celery_app:app", "-Ofair",  "--pool=prefork", "-c4"]
+          volumeMounts:
+            - name: superset-configs
+              mountPath: /home/superset/config
+          {{- if .Values.extraEnv }}
+          env:
+            {{- range $key, $value := .Values.extraEnv }}
+            - name: "{{ $key }}"
+              value: "{{ $value }}"
+            {{- end }}
+          {{- end }}
+          {{- if .Values.extraEnvFromSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.extraEnvFromSecret }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            exec:
+              # bash is needed to replace the environment variable
+              command: [
+                "bash",
+                "-c",
+                "celery inspect ping -A superset.tasks.celery_app:app -d celery@$HOSTNAME"
+              ]
+            initialDelaySeconds: 30  # startup takes some time
+            periodSeconds: 60  # default is quite often and celery uses a lot cpu/ram then.
+            timeoutSeconds: 10  # default is too low
+          readinessProbe:
+            exec:
+              # bash is needed to replace the environment variable
+              command: [
+                "bash",
+                "-c",
+                "celery inspect ping -A superset.tasks.celery_app:app -d celery@$HOSTNAME"
+              ]
+            initialDelaySeconds: 30  # startup takes some time
+            periodSeconds: 60  # default is quite often and celery uses a lot cpu/ram then.
+            timeoutSeconds: 10  # default is too low
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}
